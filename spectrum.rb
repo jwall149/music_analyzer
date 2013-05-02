@@ -93,7 +93,6 @@ WINDOW = 1024
 class FFTStream < Stream
   def initialize
     @max = 1
-    @playing = true
     @fourier = FourierTransform.new(WINDOW, 44100)
   end
 
@@ -114,7 +113,7 @@ class FFTStream < Stream
       print "\e[0m"
     end
     
-    @playing ? :paContinue : :paAbort
+    :paContinue
   end
 end
 
@@ -127,20 +126,13 @@ input[:sampleFormat] = API::Int16
 input[:suggestedLatency] = 0
 input[:hostApiSpecificStreamInfo] = nil
 
-playing = true
-Signal.trap('INT') { 
-  API.Pa_Terminate
-  playing = false
-  exit
-}
-
 stream = FFTStream.new
 stream.open(input, nil, 44100, WINDOW)
 stream.start
 
-loop do
-  sleep(1)
-end
+at_exit { 
+  stream.close
+  API.Pa_Terminate
+}
 
-stream.close
-API.Pa_Terminate
+loop { sleep 1 }
