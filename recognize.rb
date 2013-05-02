@@ -3,7 +3,7 @@ require "fftw3"
 
 include FFI::PortAudio
 
-class Shazamlizator
+class Analyzer
   def initialize(window_size = nil)
     @window_size = window_size || 4096
   end
@@ -22,6 +22,7 @@ class FFTStream < Stream
   def initialize
     @max = 1
     @playing = true
+    @fourier = 
   end
 
   def process(input, output, frameCount, timeInfo, statusFlags, userData)
