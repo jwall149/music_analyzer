@@ -1,24 +1,24 @@
 require "ruby-audio"
-require "fftw3"
+require "redis"
+require './fourier_transform.rb'
+
+@redis = Redis.new(:host => "localhost", :port => 6379)
 
 fname = ARGV[0]
-window_size = 4096
-wave = Array.new
-fft = Array.new(window_size/2,[])
 
 begin
-    buf = RubyAudio::Buffer.short(window_size)
+    buf = RubyAudio::Buffer.short(WINDOW)
     RubyAudio::Sound.open(fname) do |snd|
         while snd.read(buf) != 0
-            wave.concat(buf.to_a)
-            na = NArray.to_na(buf.to_a)
-            fft_slice = FFTW3.fft(na).to_a[0, window_size/2]
-            j=0
-            fft_slice.each { |x| fft[j] << x; j+=1 }
+            continue if buf.nil? || buf.to_a.empty?
+            vector = FourierTransform.vector(buf.to_a,4)
+            if vector[0]+vector[1]+vector[2]+vector[3] > 10
+                @redis.set(vector.join('_'), fname)
+                puts "#{vector.join('_')}"
+            end
         end
     end
-
-rescue => err
-    log.error "error reading audio file: " + err
+rescue
+    puts "Error"
     exit
 end
