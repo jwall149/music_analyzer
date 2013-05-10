@@ -13,16 +13,24 @@ class FFTStream < Stream
   end
 
   def process(input, output, frameCount, timeInfo, statusFlags, userData)
-    vector = FourierTransform.vector(input.read_array_of_int16(frameCount),4)
+    wave = input.read_array_of_int8(frameCount)
+    vector = FourierTransform.vector(wave)
     
-    print "\e[2J\e[H"
+    print "\e[2J\e[H"    
     puts "Songs:"
+    @songs.sort_by {|k,v| v}.reverse
+    @songs.keys[0,10].each do |song|
+      puts "#{song} has #{@songs[song]} hit(s)!"
+    end
 
-    val = @redis.get(vector.join("_"))    
+    hits = @redis.get(vector.join("_"))
+    puts vector.join("_").to_s
 
-    if val
-      @songs[val] = @songs[val] ? @songs[val] + 1  : 1
-      puts "#{val}: #{@songs[val]}"
+    if hits
+      hits = Marshal.load(hits)
+      hits.each do |hit|
+        @songs[hit] = @songs[hit] ? @songs[hit] + 1  : 1
+      end
     end
     
     @playing ? :paContinue : :paAbort
@@ -34,7 +42,7 @@ API.Pa_Initialize
 input = API::PaStreamParameters.new
 input[:device] = API.Pa_GetDefaultInputDevice
 input[:channelCount] = 1
-input[:sampleFormat] = API::Int16
+input[:sampleFormat] = API::Int8
 input[:suggestedLatency] = 0
 input[:hostApiSpecificStreamInfo] = nil
 
